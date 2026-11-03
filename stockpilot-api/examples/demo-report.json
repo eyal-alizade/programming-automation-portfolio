@@ -1,0 +1,16 @@
+{
+  "project": "StockPilot API",
+  "synthetic_data_only": true,
+  "transport": "in-process ASGI; no HTTP server or external service",
+  "checks": {
+    "product_created": true,
+    "order_reserved": true,
+    "idempotency_replayed": true,
+    "oversell_rejected": true,
+    "cancellation_repeat_safe": true,
+    "original_stock_restored": true
+  },
+  "order_total_cents": 11500,
+  "order_status": "cancelled",
+  "final_available": 10
+}

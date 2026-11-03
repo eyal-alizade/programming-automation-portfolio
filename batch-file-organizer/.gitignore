@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+demo-input/
+demo-output/
+.organizer-manifests/
+.coverage

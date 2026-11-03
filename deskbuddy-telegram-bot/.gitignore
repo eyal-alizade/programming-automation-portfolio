@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+.deskbuddy/
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+.DS_Store

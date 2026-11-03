@@ -1,0 +1,151 @@
+{
+  "synthetic": true,
+  "network_used": false,
+  "transcript": [
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 1,
+      "text": "/start"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "היי, אני דסקבאדי 🐾\nעוזר קטן שמסדר בקשות לעסק.\n/new לפתיחת בקשה\n/status למעקב\n/help לעזרה"
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 2,
+      "text": "/queue"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "הפקודה זמינה למנהלי העסק בלבד. לבקשות שלך: /status."
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 3,
+      "text": "/new"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "נעים להכיר 🐾 איך קוראים לך או לעסק? (2–80 תווים)"
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 4,
+      "text": "מאפיית הדגמה"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "מה צריך לפתור? ספרו מה קורה היום ומה התוצאה הרצויה. (10–1,000 תווים)"
+    },
+    {
+      "event": "restart",
+      "text": "Database reopened; the draft resumes at the need step."
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 5,
+      "text": "נרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח."
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "איך נוח לחזור אליך? אפשר לכתוב דוא״ל, טלפון או ״כאן בצ׳אט״. (3–120 תווים)"
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 6,
+      "text": "כאן בצ׳אט — נתוני הדגמה בלבד"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "כמעט שם 🐾\nשם: מאפיית הדגמה\nבקשה: נרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח.\nדרך קשר: כאן בצ׳אט — נתוני הדגמה בלבד\n\nלשליחה כתבו ״שלח״ או send. /cancel לביטול.\nהפרטים יועברו למנהלי העסק; עדכון סגירה יישלח כאן."
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 7,
+      "text": "שלח"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "הבקשה נשלחה 🐾 המספר שלך הוא #1.\nלמעקב: /status 1\nהבקשה עדיין אינה הזמנה או התחייבות למחיר ולמועד."
+    },
+    {
+      "event": "reply",
+      "chat_id": 9001,
+      "text": "🐾 בקשה חדשה #1\nמאפיית הדגמה\nנרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח.\nלפרטים: /ticket 1"
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 7,
+      "text": "שלח"
+    },
+    {
+      "event": "duplicate_ignored",
+      "update_id": 7
+    },
+    {
+      "event": "input",
+      "user_id": 9001,
+      "update_id": 8,
+      "text": "/queue"
+    },
+    {
+      "event": "reply",
+      "chat_id": 9001,
+      "text": "🐾 בקשות פתוחות — עמוד 1\n#1 · מאפיית הדגמה · נרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח.\nעמוד נוסף: /queue 2"
+    },
+    {
+      "event": "input",
+      "user_id": 9001,
+      "update_id": 9,
+      "text": "/ticket 1"
+    },
+    {
+      "event": "reply",
+      "chat_id": 9001,
+      "text": "בקשה #1\nשם: מאפיית הדגמה\nבקשה: נרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח.\nקשר: כאן בצ׳אט — נתוני הדגמה בלבד\nמצב: פתוחה"
+    },
+    {
+      "event": "input",
+      "user_id": 9001,
+      "update_id": 10,
+      "text": "/close 1 ההדגמה הושלמה; זו אינה בקשת לקוח אמיתית."
+    },
+    {
+      "event": "reply",
+      "chat_id": 9001,
+      "text": "בקשה #1 נסגרה 🐾"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "עדכון מדסקבאדי 🐾 בקשה #1 נסגרה.\nההדגמה הושלמה; זו אינה בקשת לקוח אמיתית."
+    },
+    {
+      "event": "input",
+      "user_id": 1001,
+      "update_id": 11,
+      "text": "/status"
+    },
+    {
+      "event": "reply",
+      "chat_id": 1001,
+      "text": "🐾 הבקשות שלך:\n#1 — נסגרה — נרצה כלי שמרכז הזמנות יומיות ומפיק רשימת הכנה למטבח."
+    }
+  ]
+}

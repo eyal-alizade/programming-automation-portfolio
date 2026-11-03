@@ -1,0 +1,36 @@
+# Runtime and credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.venv/
+**/.venv/
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.log
+
+# Generated examples and local tools
+demo-output/
+**/demo-output/
+demo-input/
+**/demo-input/
+data/
+**/data/
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+.DS_Store
+Thumbs.db
