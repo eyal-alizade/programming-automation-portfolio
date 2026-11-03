@@ -13,10 +13,24 @@ import re
 import stat
 import sys
 import tempfile
+from typing import Literal, TypedDict
 import uuid
 
 VERSION = 1
 JOURNAL_DIR = ".organizer-manifests"
+
+
+class Fingerprint(TypedDict):
+    size: int
+    mtime_ns: int
+    sha256: str
+
+
+class MoveEntry(TypedDict):
+    name: str
+    relative_target: str
+    fingerprint: Fingerprint
+    status: Literal["pending", "moved", "skipped", "undone"]
 
 
 class OrganizerError(Exception):
@@ -59,7 +73,11 @@ def roots(source: str | Path, target: str | Path) -> tuple[Path, Path]:
     return source, target
 
 
-def fingerprint(path: Path) -> dict:
+def file_identity(info: os.stat_result) -> tuple[int, int, int, int]:
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+
+
+def fingerprint(path: Path) -> Fingerprint:
     """Hash a stable regular file without following symlinks."""
     check_no_symlinks(path)
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
@@ -70,8 +88,7 @@ def fingerprint(path: Path) -> dict:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
         after = os.fstat(stream.fileno())
     now = path.lstat()
-    identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns)
-    if identity(before) != identity(after) or identity(after) != identity(now):
+    if file_identity(before) != file_identity(after) or file_identity(after) != file_identity(now):
         raise OrganizerError(f"File changed while reading: {path.name}")
     return {"size": after.st_size, "mtime_ns": after.st_mtime_ns, "sha256": digest}
 
@@ -85,7 +102,7 @@ def grouping(path: Path, method: str) -> str:
     return extension if re.fullmatch(r"[a-z0-9]{1,16}", extension) else "other-extension"
 
 
-def build_plan(source: Path, target: Path, method: str) -> tuple[list[dict], list[str]]:
+def build_plan(source: Path, target: Path, method: str) -> tuple[list[MoveEntry], list[str]]:
     entries, skipped = [], []
     for path in sorted(source.iterdir(), key=lambda p: (p.name.casefold(), p.name)):
         if "\\" in path.name or ":" in path.name:
@@ -111,7 +128,7 @@ def build_plan(source: Path, target: Path, method: str) -> tuple[list[dict], lis
     return entries, skipped
 
 
-def move_exclusive(source: Path, destination: Path, expected: dict) -> None:
+def move_exclusive(source: Path, destination: Path, expected: Fingerprint) -> None:
     """Hard-link then unlink: destination creation atomically refuses overwrite."""
     check_no_symlinks(source)
     check_no_symlinks(destination)
@@ -183,6 +200,31 @@ def organize(source_arg: str, target_arg: str, method: str, apply: bool) -> int:
     return 1 if failed else 0
 
 
+def validate_manifest_entry(item: object) -> None:
+    """Validate one journal entry before undo touches any files."""
+    if not isinstance(item, dict):
+        raise OrganizerError("Invalid manifest entry.")
+    name = item.get("name")
+    relative = item.get("relative_target")
+    expected = item.get("fingerprint")
+    if (not isinstance(name, str) or not name or name in {".", ".."}
+            or "/" in name or "\\" in name or ":" in name):
+        raise OrganizerError("Unsafe original filename in manifest.")
+    if not isinstance(relative, str) or "\\" in relative:
+        raise OrganizerError("Unsafe destination in manifest.")
+    parts = relative.split("/")
+    if (len(parts) != 2 or parts[1] != name or parts[0] in {"", ".", "..", JOURNAL_DIR}
+            or ":" in parts[0]):
+        raise OrganizerError("Unsafe destination in manifest.")
+    if (not isinstance(expected, dict) or set(expected) != {"size", "mtime_ns", "sha256"}
+            or type(expected["size"]) is not int or expected["size"] < 0
+            or type(expected["mtime_ns"]) is not int
+            or not isinstance(expected["sha256"], str)
+            or not re.fullmatch("[0-9a-f]{64}", expected["sha256"])
+            or item.get("status") not in ("pending", "moved", "skipped", "undone")):
+        raise OrganizerError("Invalid fingerprint or status in manifest.")
+
+
 def load_manifest(path: Path) -> tuple[dict, Path, Path]:
     check_no_symlinks(path)
     with path.open(encoding="utf-8") as stream:
@@ -202,29 +244,12 @@ def load_manifest(path: Path) -> tuple[dict, Path, Path]:
         raise OrganizerError("Manifest entries must be a list.")
     seen_source, seen_target = set(), set()
     for item in entries:
-        if not isinstance(item, dict):
-            raise OrganizerError("Invalid manifest entry.")
-        name, relative, expected = item.get("name"), item.get("relative_target"), item.get("fingerprint")
-        if (not isinstance(name, str) or not name or name in {".", ".."}
-                or "/" in name or "\\" in name or ":" in name):
-            raise OrganizerError("Unsafe original filename in manifest.")
-        if not isinstance(relative, str) or "\\" in relative:
-            raise OrganizerError("Unsafe destination in manifest.")
-        parts = relative.split("/")
-        if (len(parts) != 2 or parts[1] != name or parts[0] in {"", ".", "..", JOURNAL_DIR}
-                or ":" in parts[0]):
-            raise OrganizerError("Unsafe destination in manifest.")
+        validate_manifest_entry(item)
+        name, relative = item["name"], item["relative_target"]
         if name in seen_source or relative in seen_target:
             raise OrganizerError("Duplicate paths in manifest.")
         seen_source.add(name)
         seen_target.add(relative)
-        if (not isinstance(expected, dict) or set(expected) != {"size", "mtime_ns", "sha256"}
-                or type(expected["size"]) is not int or expected["size"] < 0
-                or type(expected["mtime_ns"]) is not int
-                or not isinstance(expected["sha256"], str)
-                or not re.fullmatch("[0-9a-f]{64}", expected["sha256"])
-                or item.get("status") not in ("pending", "moved", "skipped", "undone")):
-            raise OrganizerError("Invalid fingerprint or status in manifest.")
     return document, source, target
 
 

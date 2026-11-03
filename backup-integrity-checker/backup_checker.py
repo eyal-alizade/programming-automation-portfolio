@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+from typing import BinaryIO, Iterator
 import zipfile
 import zlib
 
@@ -77,8 +78,15 @@ def scan(root: Path) -> tuple[dict[str, os.stat_result], list[str]]:
     return files, skipped
 
 
+def same_source_tree(before: dict[str, os.stat_result], skipped_before: list[str],
+                     after: dict[str, os.stat_result], skipped_after: list[str]) -> bool:
+    """Compare file membership and identity after capture or source comparison."""
+    return (before.keys() == after.keys() and skipped_before == skipped_after
+            and all(signature(before[path]) == signature(after[path]) for path in before))
+
+
 @contextmanager
-def open_regular(root: Path, relative: str, expected: os.stat_result):
+def open_regular(root: Path, relative: str, expected: os.stat_result) -> Iterator[BinaryIO]:
     """Refuse symlinks, and on Unix open each component with directory FDs."""
     safe_relative_path(relative)
     descriptors: list[int] = []
@@ -118,7 +126,8 @@ def open_regular(root: Path, relative: str, expected: os.stat_result):
             os.close(directory)
 
 
-def hash_stream(stream, destination=None, limit: int | None = None) -> tuple[int, str]:
+def hash_stream(stream: BinaryIO, destination: BinaryIO | None = None,
+                limit: int | None = None) -> tuple[int, str]:
     digest = hashlib.sha256()
     size = 0
     while block := stream.read(CHUNK):
@@ -167,8 +176,7 @@ def create_backup(source: Path, archive: Path) -> dict:
                         raise BackupError(f"Source size changed: {relative!r}")
                     manifest["files"].append({"path": relative, "size": size, "sha256": digest})
                 current, current_skipped = scan(root)
-                if (current.keys() != files.keys() or current_skipped != skipped
-                        or any(signature(current[p]) != signature(info) for p, info in files.items())):
+                if not same_source_tree(files, skipped, current, current_skipped):
                     raise BackupError("Source tree changed during backup; retry with writers stopped")
                 encoded = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
                 if len(encoded) > MAX_MANIFEST:
@@ -286,8 +294,7 @@ def verify_backup(archive: Path, source: Path | None = None, *,
             if size != entries[path]["size"] or digest != entries[path]["sha256"]:
                 raise VerificationError(f"Source content differs: {path!r}")
         after, after_skipped = scan(root)
-        if (current.keys() != after.keys() or skipped != after_skipped
-                or any(signature(after[p]) != signature(info) for p, info in current.items())):
+        if not same_source_tree(current, skipped, after, after_skipped):
             raise BackupError("Source tree changed during comparison")
         result["source_matches"] = True
         result["skipped_symlinks"] = skipped

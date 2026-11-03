@@ -1,69 +1,85 @@
-# CSV Report Builder
+# איחוד קובצי מכירות לדוח אחד
 
-Consolidate sales exports, remove exact repeated records, and produce grouped totals without spreadsheet formulas or external packages.
+מקבלים כמה קובצי מכירות ורוצים סיכום אחד, בלי להעתיק שורות ולבנות נוסחאות.
+הכלי מאחד את הקבצים, מסיר שורות זהות ומפיק סיכום כמויות וסכומים לפי פריט.
+קובצי המקור נשארים כפי שהם.
 
-**Portfolio demonstration by Eyal Alizade / אייל אליזאדה.** The bundled files are synthetic examples, not client data or a representation of paid client work.
+## הדוגמה שבפרויקט
 
-## Run the demo
+שני קובצי הדוגמה כוללים **6 רשומות**. התוצאה היא **5 רשומות**, כפילות מדויקת
+אחת שהוסרה וסכום של **185.10 ₪**. הנתונים נוצרו לתיק העבודות.
+אפשר לפתוח [סיכום לפי פריט](examples/summary.csv) או [דוח טקסט](examples/report.txt)
+שנוצרו בהרצה בפועל.
 
-Python **3.11 or newer**, standard library only. Run from this project directory:
-
-```bash
-python -m csv_report_builder samples/sales-a.csv samples/sales-b.csv --output demo-output --currency ILS
-python -m unittest discover -s tests -v
-```
-
-Expected result: **6 input records → 5 exported records, 1 exact duplicate removed, total 185.10 ILS**. Dates in the two synthetic source batches overlap to demonstrate duplicate detection.
-
-The output directory must be new. To deliberately regenerate an existing demo directory, add `--overwrite`. The program replaces only its four report files and preserves unrelated files.
-
-## Input contract
-
-UTF-8 with or without BOM. Comma, semicolon, tab and pipe delimiters are detected per file. Quoted separators and multiline fields are handled by Python's CSV parser. Use `--delimiter comma`, `semicolon`, `tab` or `pipe` if detection is ambiguous.
-
-| Column | Rule | Supported alias |
-| --- | --- | --- |
-| `date` | Valid `YYYY-MM-DD` calendar date | `sale_date` |
-| `item` | Nonempty text; surrounding whitespace is trimmed for grouping | `product` |
-| `quantity` | Positive integer | `qty` |
-| `unit_price` | Nonnegative decimal, at most two places; decimal point, no currency symbol | `price` |
-
-Header names are case-insensitive; spaces become underscores. Extra columns are preserved as a union across files. Missing extra cells are blank. Duplicate normalized headers and reserved output names are rejected. Numeric fields support at most 100 integer digits. Zero-priced items are valid; negative quantities/prices and returns are outside this sales-only contract.
-
-Validation is strict: the first invalid record aborts with a filename, input index and record number before report publication. Empty input files, malformed field counts, invalid UTF-8 and an entirely header-only input set fail. Individual header-only files may accompany files containing sales records.
-
-All inputs must use the same currency. `--currency ILS` labels the report; it performs no currency detection or conversion. Without the option, currency is explicitly unspecified.
-
-## What is produced
-
-| File | Contents |
+| קובץ תוצאה | מה יש בו |
 | --- | --- |
-| `consolidated.csv` | Canonical columns, exact line totals, input filename/index/record number, preserved extra columns |
-| `summary.csv` | One row per item, summed quantity and exact amount |
-| `report.json` | Per-file counts, duplicate counts, overall totals and processing policy |
-| `report.txt` | Short readable totals and processing notes |
+| `consolidated.csv` | כל הרשומות שאוחדו, עם סכום לכל שורה ומקור הרשומה |
+| `summary.csv` | כמות וסכום לכל פריט |
+| `report.txt` | סיכום קצר לקריאה |
+| `report.json` | אותו סיכום לשילוב עם תוכנות אחרות |
 
-Money is parsed and calculated with `Decimal` and input-sized precision. Monetary values in JSON are decimal strings. CSVs use UTF-8 BOM for common spreadsheet applications. Filename-only provenance avoids writing local directory paths into reports; `source_index` distinguishes identically named input files. A record number counts parsed CSV records, including the header and blank records, rather than physical lines inside quoted fields.
+## הפעלה
 
-## Duplicate and export behavior
+צריך Python 3.11 ומעלה, ללא ספריות נוספות. מתוך תיקיית הפרויקט:
 
-Deduplication compares exact decoded cell values under normalized column names, including extra columns. Delimiter choice, quoting and source location do not distinguish a record. Different extra values are retained. Distinct numeric text such as `1.0` and `1.00` is not treated as an exact duplicate.
-
-Identical rows can also represent legitimate separate sales. Use **`--keep-duplicates`** for that situation; detected and removed counts remain separate in the report. The tool does not infer order identities.
-
-Potential spreadsheet formula text, including item names, extra values, exported headers and source filenames, is prefixed with an apostrophe. This intentionally changes those CSV display values to literal text. The JSON totals and record counts are unaffected.
-
-Outputs are staged before publication. A new output directory is created exclusively; an existing directory is refused unless `--overwrite` is supplied. Inputs cannot be overwritten by generated filenames, and output symlinks are refused. Each replacement file is atomic, but replacement of four files is not a single filesystem transaction; an I/O failure during explicit overwrite may leave a mix of old and new reports.
-
-## Verification and limits
-
-```bash
-python -m unittest discover -s tests -v
-python -m csv_report_builder --help
+```sh
+python -m csv_report_builder samples/sales-a.csv samples/sales-b.csv --output demo-output --currency ILS
 ```
 
-Tests cover quoted/BOM/multiline CSV, delimiter selection, aliases, exact large-number arithmetic, duplicates, formula-like text, strict failure, blank rows, extra columns and output preservation. Tests create temporary files only.
+```text
+Exported 5 rows; removed 1 exact duplicates.
+Grand total: 185.10 ILS
+Reports: demo-output
+```
 
-The implementation keeps validated rows and duplicate keys in memory, so memory use grows with input size. It is a local reporting utility, not an accounting system, database importer or spreadsheet application. Spreadsheet UI rendering was not verified on Windows.
+פותחים את `summary.csv` בגיליון או את `report.txt` בעורך טקסט.
+התיקייה צריכה להיות חדשה. החלפה מכוונת של ארבעת קובצי הדוח דורשת `--overwrite`;
+קבצים אחרים באותה תיקייה נשמרים.
 
-Contact: **Eyal Alizade / אייל אליזאדה** — **mr.pitronot@gmail.com**.
+## מבנה הקלט
+
+| עמודה | תוכן | שם חלופי נתמך |
+| --- | --- | --- |
+| `date` | תאריך תקין, `YYYY-MM-DD` | `sale_date` |
+| `item` | שם פריט | `product` |
+| `quantity` | כמות שלמה וחיובית | `qty` |
+| `unit_price` | מחיר לא שלילי, עד שתי ספרות אחרי הנקודה | `price` |
+
+עמודות נוספות נשמרות. נתמכים פסיק, נקודה־פסיק, טאב וקו אנכי, בקידוד UTF-8
+עם או בלי BOM. בשורה לא תקינה הפעולה נעצרת לפני פרסום הדוחות ומציינת את מקומה.
+
+כפילות פירושה שכל ערכי השורה זהים. אם שתי שורות זהות הן מכירות נפרדות, מוסיפים
+`--keep-duplicates`. כל הקבצים חייבים להשתמש באותו מטבע; `--currency` מסמן אותו
+ואינו מבצע המרה. אין תמיכה בהחזרות עם כמויות או מחירים שליליים.
+
+## Developer notes
+
+`csv_report_builder.py` separates parsing/validation, deduplication, Decimal
+aggregation, CSV/text formatting and staged publication. The code keeps rows and
+duplicate keys in memory, so memory use grows with input size.
+
+Headers are case-insensitive; whitespace becomes underscores before aliases are
+applied. Duplicate/reserved headers fail validation. Deduplication compares exact
+decoded cells under those names, including extras; `1.0` and `1.00` differ.
+Rows are counted as parsed CSV records, not physical lines inside quoted fields.
+Provenance uses filenames and input indices, without local directory paths.
+
+Money uses input-sized Decimal precision and JSON decimal strings. Numeric input
+supports at most 100 integer digits. CSV exports use UTF-8 BOM and prefix potential
+spreadsheet formulas in text, headers and filenames with an apostrophe.
+Use `--delimiter comma|semicolon|tab|pipe` if automatic detection is ambiguous.
+
+Inputs cannot be overwritten by report filenames; output symlinks are refused.
+Outputs are staged before publication. Each replacement is atomic, but the four
+files are not one transaction: an overwrite I/O failure may leave mixed versions.
+Empty inputs fail; a header-only file may accompany files containing records.
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+14 temporary-file tests cover CSV parsing, exact arithmetic, duplicate handling,
+validation, formula protection and existing-file preservation. Spreadsheet display
+on Windows has not been verified.
+
+אייל אליזאדה / Eyal Alizade · [mr.pitronot@gmail.com](mailto:mr.pitronot@gmail.com)

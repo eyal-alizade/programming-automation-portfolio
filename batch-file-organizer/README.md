@@ -1,144 +1,86 @@
-# Batch File Organizer
+# סידור קבצים אוטומטי
 
-**A safe-by-default file automation portfolio demo by Eyal Alizade / אייל אליזאדה.**
+תיקייה עם קבצים מסוגים שונים, במקום למיין אותם אחד־אחד.
+הכלי מציג את השינויים המתוכננים ומעביר את הקבצים לתיקיות לפי סוג או חודש שינוי.
+אפשר להחזיר קבצים שלא השתנו למיקום המקורי.
 
-Preview a folder cleanup, organize its files by extension or modification month,
-and restore unchanged files using a recorded manifest. Built with Python 3.11+
-and its standard library. No installation, accounts, network access or third-party
-packages are needed.
+## דוגמה
 
-This is an original portfolio demonstration using synthetic files. It is **not
-client work** and makes no claim about client results.
+| לפני | אחרי |
+| --- | --- |
+| `meeting.txt` | `txt/meeting.txt` |
+| `orders.csv` | `csv/orders.csv` |
+| `settings.json` | `json/settings.json` |
 
-## Try the synthetic demo
+קובץ שכבר קיים ביעד לא נדרס. תיקיות משנה נשארות במקומן.
+חמשת הקבצים בדוגמה נוצרו לצורך תיק העבודות.
+אפשר לקרוא את [פלט התצוגה המקדימה מהרצה בפועל](examples/preview.txt).
 
-Run these commands from this project directory. On Windows, use `py -3.11`
-instead of `python` if that is your Python launcher.
+## הפעלה
+
+צריך Python 3.11 ומעלה, ללא התקנת ספריות. מתוך תיקיית הפרויקט:
 
 ```sh
 python sample_data.py demo-input
 python organizer.py organize demo-input demo-output
 ```
 
-Expected preview:
+בשלב הזה מוצגת תצוגה מקדימה בלבד:
 
 ```text
-DRY RUN — no files will be changed.
 WOULD MOVE meeting.txt -> txt/meeting.txt
 WOULD MOVE orders.csv -> csv/orders.csv
-WOULD MOVE README -> no-extension/README
-WOULD MOVE report.TXT -> txt/report.TXT
-WOULD MOVE settings.json -> json/settings.json
-SKIP nested: not a regular top-level file
 Planned: 5 | Skipped: 1
 ```
 
-The preview does not create the target directory. To perform the moves:
+להעברה בפועל:
 
 ```sh
 python organizer.py organize demo-input demo-output --apply
 ```
 
-The command prints a manifest path such as
-`demo-output/.organizer-manifests/<run-id>.json` (the actual output uses an
-absolute path). Copy the printed path for the following commands:
+הפקודה מדפיסה נתיב לקובץ מניפסט שמתעד את ההעברות. מעתיקים את הנתיב במקום
+`<manifest-path>` כדי לבדוק החזרה, ואז מוסיפים `--apply` כדי לבצע אותה:
 
 ```sh
-python organizer.py undo "demo-output/.organizer-manifests/<run-id>.json"
-python organizer.py undo "demo-output/.organizer-manifests/<run-id>.json" --apply
+python organizer.py undo "<manifest-path>"
+python organizer.py undo "<manifest-path>" --apply
 ```
 
-Undo first previews the same five restores. Applying it restores each file to
-its original location, preserving its content and modification time. Empty
-output directories and the manifest are retained. A second undo does nothing.
+למיון לפי חודש השינוי ב־UTC משתמשים ב־`--by date`.
+ב־Windows אפשר להשתמש ב־`py -3.11` במקום `python`.
 
-After undo, try grouping by **UTC modification month**:
+## מה חשוב לדעת
 
-```sh
-python organizer.py organize demo-input demo-output --by date
-```
+- המקור והיעד צריכים להיות תיקיות נפרדות באותה מערכת קבצים, עם תמיכה בקישורים קשיחים.
+- קישורים סמליים אינם מועברים. נבדקים גם רכיבי נתיב שמופיעים לפני `..`.
+- החזרה מסרבת לגעת בקובץ ששונה, נעלם, או שכבר יש קובץ במיקומו המקורי.
+- יש להריץ מופע אחד בכל פעם ולעצור תוכנות שמשנות את הקבצים בזמן הפעולה.
+- המניפסט מתעד מיקומים, לא מגבה תוכן. שומרים אותו בתיקייתו המקורית ולא משתפים אותו: יש בו נתיבים מקומיים.
 
-The five synthetic files are dated January 2026, so their destination group is
-`2026-01/`. Date grouping uses modification time, not creation time or photo EXIF.
-The sample generator requires a new directory and refuses to overwrite one.
+## Developer notes
 
-## Behavior and safety
+`organizer.py` contains path validation, planning, exclusive moves and journal-based undo.
+`sample_data.py` creates a new isolated input directory and refuses existing ones.
 
-| Situation | Behavior |
-| --- | --- |
-| No `--apply` | Preview only, for organize and undo |
-| Existing destination | Skip; never replace or rename the existing file |
-| Source subdirectory | Skip; this tool processes top-level files only |
-| Symlink file or path component | Skip the file or reject the root; never follow it |
-| Identical or nested source/target | Reject before creating output |
-| Changed or missing organized file | Refuse to undo that file |
-| New file at the original location | Refuse to overwrite it during undo |
-| Unsupported filename | Skip names containing backslash or colon |
-| Different filesystem | Reject; moves require same-filesystem hard-link support |
+Moves use exclusive hard-link creation followed by unlinking the source. SHA-256,
+size and modification time are checked before moving and restoring. Each journal
+is saved before moving and updated atomically after each result. The batch itself
+is not atomic: interruption can leave completed moves or two names for one file.
+Undo refuses a duplicate original path; inspect it manually. Empty directories remain.
 
-Symlink checks apply to the supplied path before collapsing `..` components, so
-a path such as `link/../incoming` cannot bypass root validation.
-
-Extensions are case-insensitive: `.TXT` goes to `txt/`. Files without an
-extension go to `no-extension/`; unusual extensions go to `other-extension/`.
-Files are processed in a stable name order. Hidden regular files are included.
-
-Moves create an exclusive hard link before removing the source name, so a
-destination that appears after preview is also protected from overwrite. The
-source content and modification time are hashed and checked again before moving.
-Undo checks SHA-256, size and modification time; editing a file or even touching
-its modification time prevents automatic restoration.
-
-A JSON journal is written **before** the first move and updated atomically after
-each result. A pending entry can be restored if a move completed before its
-journal update. Each run gets a separate manifest. Keep it in its original
-`.organizer-manifests` directory and keep both root directories in place.
-
-### Practical limits
-
-- Run one organizer instance at a time and pause other applications that modify
-  these files. This utility is not a locking system against concurrent or hostile
-  filesystem changes.
-- Hard-link support is required; some network drives, removable filesystems and
-  filesystem configurations do not support it. Failed moves retain the source.
-- A whole batch is not one transaction. On interruption, already moved files stay
-  moved; use the printed manifest to preview recovery. An interruption between
-  link creation and source removal can leave both names. Undo refuses that
-  collision; inspect both files manually before removing a duplicate.
-- A manifest is an undo record, **not a backup**. It cannot recover deleted or
-  corrupted contents. It contains local absolute paths and should not be shared
-  or committed. Generated sample folders and journals are ignored by Git.
-- Linux is exercised by the automated test suite. Windows and macOS behavior
-  should be verified on the intended filesystem before use with important files.
-
-Exit status: `0` for a completed preview/run (including ordinary planned skips),
-`1` for failed moves or refused restores, `2` for validation or I/O errors.
-`python organizer.py --help` lists commands.
-
-## Verification
+Extension grouping is case-insensitive. Missing extensions use `no-extension`;
+unusual extensions use `other-extension`. Names containing `:` or `\` are skipped.
+Hidden regular files are included. Date grouping uses UTC modification time.
 
 ```sh
 python -m unittest discover -s tests -v
 ```
 
-Tests operate exclusively in temporary directories and cover previews, round-trip
-undo, date grouping, collision protection, symlinks, nested roots, changed/missing
-files, malformed manifests and interrupted journal recovery. They never touch
-your downloads or personal documents.
+25 temporary-directory tests cover dry runs, collisions, symlinks, root validation,
+changed files, undo and interrupted journal recovery. Linux was tested; Windows
+and macOS need verification on the intended filesystem.
+Exit codes: `0` completed, including planned skips; `1` move/restore refusals;
+`2` validation or I/O error.
 
-## התחלה מהירה בעברית
-
-זהו פרויקט תיק עבודות עם קבצים סינתטיים, ללא מידע של לקוחות.
-נדרש Python 3.11 ומעלה.
-
-```sh
-python sample_data.py demo-input
-python organizer.py organize demo-input demo-output
-```
-
-הפקודה מציגה תצוגה מקדימה בלבד. כדי להעביר את הקבצים הוסף `--apply`.
-להחזרה השתמש בפקודת `undo` עם הנתיב לקובץ המניפסט שהודפס; גם היא מבצעת
-תצוגה מקדימה עד שמוסיפים `--apply`. קובץ שהשתנה לא יוחזר אוטומטית.
-אין דריסה של קבצים קיימים, ואין מעבר לתוך תיקיות משנה.
-
-**Business inquiries:** [mr.pitronot@gmail.com](mailto:mr.pitronot@gmail.com)
+אייל אליזאדה / Eyal Alizade · [mr.pitronot@gmail.com](mailto:mr.pitronot@gmail.com)

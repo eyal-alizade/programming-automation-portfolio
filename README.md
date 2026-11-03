@@ -1,72 +1,60 @@
-# Eyal Alizade — Programming & Automation
+# אייל אליזאדה — תכנות ואוטומציה
 
-Practical software demos: a service bot, an inventory API, and tools that automate everyday work.
+יש לכם משימה שחוזרת על עצמה, או רעיון לכלי שאין לכם זמן לבנות?
+אני בונה תוכנות, בוטים ואוטומציות שחוסכים את ההתעסקות הזאת.
 
-**Contact:** [mr.pitronot@gmail.com](mailto:mr.pitronot@gmail.com)
+אפשר לפנות גם בלי לדעת לתכנת או לעבוד עם כלי AI. מסבירים מה עושים היום ומה רוצים לקבל, ומשם בודקים מה כדאי לבנות.
 
-These are portfolio projects built with synthetic examples. They are not presented as past client engagements or as independently audited production services. Each project includes runnable code, an offline demo or sample workflow, tests, and documented limits.
+**לפניות: [mr.pitronot@gmail.com](mailto:mr.pitronot@gmail.com)**
 
-## Featured projects
+## בוט שמרכז פניות
 
-### [DeskBuddy — Telegram Service Bot](deskbuddy-telegram-bot/README.md)
+לקוח כותב מה הוא צריך, הבוט שואל כמה שאלות ושומר את הבקשה. מי שמטפל בפניות מקבל תור מסודר ויכול לסגור בקשה ולעדכן את הלקוח.
 
-A friendly service-request bot with a real workflow behind the conversation: guided intake, persistent requests, status updates, an admin queue, and access controls. An offline simulator lets you explore it without a Telegram token.
+![מסך ההדגמה של DeskBuddy בזמן טיפול בפנייה](deskbuddy-telegram-bot/docs/screenshots/deskbuddy.jpg)
 
-```mermaid
-flowchart LR
-    Customer[Customer] --> Intake[Guided request intake]
-    Intake --> Store[(SQLite)]
-    Store --> Queue[Admin queue]
-    Queue --> Status[Request status]
-    Status --> Customer
-```
+זה צילום של הקוד רץ בסימולטור המקומי, עם נתוני דוגמה. אותו מנוע שיחות משמש גם את חיבור Telegram שבפרויקט.
 
-### [StockPilot — Inventory & Order API](stockpilot-api/README.md)
+[לפרויקט DeskBuddy ולהוראות ההרצה](deskbuddy-telegram-bot/README.md)
 
-A business backend for products, stock movements, and orders. It demonstrates API authentication, transactional inventory changes, stock reservation, repeat-safe cancellation, and idempotent requests. Its offline demo exercises the API without deploying a server.
+## מלאי והזמנות במקום עבודה ידנית
 
-```mermaid
-flowchart LR
-    Client[API client] --> Auth[API key check]
-    Auth --> Orders[Orders and stock operations]
-    Orders --> Transaction[SQLite transaction]
-    Transaction --> Ledger[(Inventory ledger)]
-```
+רואים כמה נשאר מכל מוצר, פותחים הזמנה ומעדכנים מלאי. אם אין מספיק יחידות, ההזמנה נעצרת. ביטול הזמנה מחזיר את הכמות למלאי.
 
-## More automation examples
+![מסך העבודה של StockPilot עם מוצרים והזמנות](stockpilot-api/docs/screenshots/inventory.jpg)
 
-| Project | What it demonstrates |
+המסך עובד מול ה־API ומסד הנתונים של הפרויקט. המוצרים וההזמנות בצילום הם נתוני דוגמה.
+
+[לפרויקט StockPilot ולהוראות ההרצה](stockpilot-api/README.md)
+
+## עוד דוגמאות
+
+| כלי | מה הוא עושה |
 | --- | --- |
-| [Batch File Organizer](batch-file-organizer/README.md) | Dry-run-first file organization, collision handling, and guarded undo |
-| [CSV Report Builder](csv-report-builder/README.md) | Validated data processing, monetary calculations, and reproducible reports |
-| [Backup Integrity Checker](backup-integrity-checker/README.md) | ZIP backups, streaming hashes, and integrity checks without extraction |
+| [ארגון קבצים](batch-file-organizer/README.md) | ממיין קבצים לתיקיות, מציג מה ישתנה לפני הביצוע ומאפשר לבטל העברה שנעשתה |
+| [דוחות מקובצי CSV](csv-report-builder/README.md) | מאחד קבצים, מסיר כפילויות זהות ומפיק סיכומים עם בדיקת נתונים |
+| [גיבוי ובדיקת קבצים](backup-integrity-checker/README.md) | יוצר גיבוי ובודק אם קובץ חסר או השתנה, בלי לפתוח את הגיבוי לתיקייה |
 
-## Run the portfolio checks
+אלה פרויקטי הדגמה שבניתי לתיק העבודות. הם מראים סוגי פתרונות שאפשר להתאים לבקשה מסוימת. בכל עבודה מסכמים מראש מה בונים, מחיר ומועד מסירה.
 
-Python 3.11 or newer is required. StockPilot uses FastAPI; the other projects use the Python standard library.
+## למי שרוצה לעבור על הקוד
+
+הקוד כתוב ב־Python. בכל תיקייה יש הוראות הרצה, דוגמאות ובדיקות. מסכי ההדגמה רצים מקומית; אין צורך בחשבון Telegram כדי לנסות את הבוט.
+
+להרצת כל הבדיקות צריך Python 3.11 ומעלה וגם Node.js 20 ומעלה לבדיקות הממשק:
 
 ```sh
 python -m venv .venv
-# Linux / macOS:
 source .venv/bin/activate
-# Windows PowerShell instead:
-# .venv\Scripts\Activate.ps1
+# ב־Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -r stockpilot-api/requirements-dev.txt
 python tools/check_portfolio.py
 ```
 
-To test a single dependency-free project:
+אפשר להריץ גם בדיקות של פרויקט אחד:
 
 ```sh
 python tools/check_portfolio.py --project batch-file-organizer
 ```
 
-Project READMEs provide the individual demo commands, configuration, and constraints. The GitHub Actions workflow is included for execution after publication; local verification is recorded separately in [verification.json](verification.json).
-
-## אייל אליזאדה — תכנות ואוטומציה
-
-אני בונה תוכנות, בוטים ואוטומציות בהתאם לצורך. כאן אפשר לראות פרויקטי הדגמה עם קוד, דוגמאות, בדיקות ותיעוד: בוט שירות, מערכת מלאי והזמנות וכלים לעיבוד נתונים וקבצים.
-
-לבדיקת פתרון מותאם: **mr.pitronot@gmail.com**. כתבו בקצרה מה עושים היום ומה תרצו לקבל בסוף. היקף, מחיר ומועד מסירה מסוכמים אחרי בירור הצורך ובדיקת היתכנות.
-
-הפרויקטים כאן הם הדגמות יכולת, עם נתונים לדוגמה. קוד שמיועד ללקוח מותאם לסביבת העבודה ולדרישות שלו לפני מסירה.
+[תוצאות הבדיקה המקומית](verification.json) · [העלאת התיק ל־GitHub](PUBLISHING.md)

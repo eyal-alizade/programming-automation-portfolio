@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StockPilot · מלאי והזמנות</title>
+    <link rel="stylesheet" href="/demo-assets/styles.css">
+    <script src="/demo-assets/app.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#inventory" aria-label="StockPilot — מלאי והזמנות">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>
+          <strong lang="en">StockPilot</strong>
+          <small>מלאי והזמנות</small>
+        </span>
+      </a>
+      <p class="nav-label">סביבת עבודה</p>
+      <nav aria-label="ניווט ראשי">
+        <a class="nav-link active" href="#inventory">
+          <span aria-hidden="true">▦</span>
+          מלאי מוצרים
+        </a>
+        <a class="nav-link" href="#orders">
+          <span aria-hidden="true">▤</span>
+          הזמנות
+        </a>
+        <button class="nav-link" id="open-ledger">
+          <span aria-hidden="true">↕</span>
+          יומן תנועות
+        </button>
+      </nav>
+      <div class="sidebar-note">
+        <span class="status-dot"></span>
+        <div>
+          סביבה מקומית
+          <small>השינויים נשמרים עד סגירת ההדגמה</small>
+        </div>
+      </div>
+      <div class="author">
+        אייל אליזאדה
+        <small>פרויקט לדוגמה · StockPilot</small>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span class="breadcrumb">
+          סביבת עבודה
+          <span aria-hidden="true">/</span>
+          מלאי והזמנות
+        </span>
+        <span class="demo-badge">
+          <span class="status-dot"></span>
+          נתוני הדגמה
+        </span>
+      </header>
+      <main>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">סקירת העסק</p>
+            <h1>מלאי והזמנות</h1>
+            <p class="subheading">מעקב אחר מוצרים, שמירת מלאי להזמנה ועדכון הכמויות במקום אחד.</p>
+          </div>
+          <button class="button secondary" id="refresh">
+            רענון נתונים
+            <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+        <div class="overview" aria-label="סיכום מלאי עדכני">
+          <span>
+            <strong id="product-count">—</strong>
+            מוצרים פעילים
+          </span>
+          <span>
+            <strong id="stock-count">—</strong>
+            יחידות זמינות
+          </span>
+          <span>
+            <strong id="order-count">—</strong>
+            הזמנות פעילות
+          </span>
+          <span class="low-summary" id="low-summary">טוען נתונים…</span>
+        </div>
+        <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+        <div class="work-grid">
+          <section class="card inventory-card" id="inventory" aria-labelledby="inventory-title">
+            <div class="card-heading">
+              <div>
+                <h2 id="inventory-title">המוצרים במלאי</h2>
+                <p>הכמות הזמינה לאחר שמירת הזמנות</p>
+              </div>
+              <span class="section-tag">מלאי חי</span>
+            </div>
+            <div class="table-toolbar">
+              <label class="search-box">
+                <span aria-hidden="true">⌕</span>
+                <input type="search" id="product-search" placeholder="חיפוש לפי שם מוצר או מק״ט" aria-label="חיפוש מוצר">
+              </label>
+              <label class="low-filter">
+                <input type="checkbox" id="low-only">
+                מלאי נמוך בלבד
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>מוצר</th>
+                    <th>מחיר יחידה</th>
+                    <th>זמין</th>
+                    <th>מצב מלאי</th>
+                    <th>
+                      <span class="sr-only">פעולות</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="products-body">
+                  <tr>
+                    <td colspan="5" class="empty">טוען מוצרים…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card-footer">
+              <span id="products-shown">טוען…</span>
+                <span>מחירים בש״ח</span>
+            </div>
+          </section>
+          <section class="card new-order-card" aria-labelledby="new-order-title">
+            <div class="card-heading">
+              <div>
+                <h2 id="new-order-title">הזמנה חדשה</h2>
+                <p>בחרו מוצרים וכמות לשמירה מהמלאי</p>
+              </div>
+              <span class="order-icon" aria-hidden="true">＋</span>
+            </div>
+            <form id="order-form">
+              <label class="field-label" for="order-reference">שם או מספר הזמנה</label>
+              <input id="order-reference" name="reference" maxlength="120" placeholder="למשל: הזמנה 1043" required>
+              <div class="line-labels">
+                <span>מוצר</span>
+                <span>כמות</span>
+                <span></span>
+              </div>
+              <div id="order-lines"></div>
+              <button type="button" class="text-button" id="add-line">＋ הוספת מוצר נוסף</button>
+              <div class="order-total">
+                <span>סכום ההזמנה</span>
+                <strong id="order-total">₪0.00</strong>
+              </div>
+              <p id="order-error" class="form-error" role="alert" hidden></p>
+              <button class="button primary full-width" type="submit" id="create-order">יצירת הזמנה ושמירת מלאי</button>
+              <p class="form-hint">המלאי מתעדכן עם יצירת ההזמנה. ביטול הזמנה מחזיר את הכמות הזמינה.</p>
+            </form>
+          </section>
+        </div>
+        <section class="card orders-card" id="orders" aria-labelledby="orders-title">
+          <div class="card-heading">
+            <div>
+              <h2 id="orders-title">הזמנות אחרונות</h2>
+              <p>הזמנות פעילות והיסטוריית ביטולים</p>
+            </div>
+            <label>
+              <span class="sr-only">סינון הזמנות</span>
+              <select id="order-filter">
+                <option value="all">כל ההזמנות</option>
+                <option value="reserved">פעילות בלבד</option>
+                <option value="cancelled">מבוטלות בלבד</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>הזמנה</th>
+                  <th>שם / אסמכתה</th>
+                  <th>מועד יצירה</th>
+                  <th>סכום</th>
+                  <th>מצב</th>
+                  <th>פעולות</th>
+                </tr>
+              </thead>
+              <tbody id="orders-body">
+                <tr>
+                  <td colspan="6" class="empty">טוען הזמנות…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <footer class="page-footer">נתוני הדגמה בלבד · הפעולות במסך מעדכנות את אותה מערכת מלאי והזמנות.</footer>
+      </main>
+    </div>
+    <dialog id="adjust-dialog">
+      <form id="adjust-form">
+        <div class="dialog-heading">
+          <h2>עדכון מלאי</h2>
+          <button type="button" class="icon-button" data-close="adjust-dialog" aria-label="סגירה">×</button>
+        </div>
+        <p id="adjust-product" class="dialog-description"></p>
+        <label class="field-label" for="adjust-delta">כמות להוספה או להפחתה</label>
+        <input id="adjust-delta" type="number" step="1" min="-1000000" max="1000000" placeholder="למשל: 5 או ‎-2" required>
+        <label class="field-label" for="adjust-reason">סיבת השינוי</label>
+        <input id="adjust-reason" maxlength="200" placeholder="למשל: קבלת סחורה חדשה" required>
+        <p id="adjust-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" class="button secondary" data-close="adjust-dialog">סגירה</button>
+          <button type="submit" class="button primary">שמירת עדכון</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="cancel-dialog">
+      <div class="dialog-heading">
+        <h2>ביטול הזמנה</h2>
+        <button class="icon-button" data-close="cancel-dialog" aria-label="סגירה">×</button>
+      </div>
+      <p id="cancel-description" class="dialog-description"></p>
+      <p class="form-hint">כל פריטי ההזמנה יחזרו למלאי הזמין. ההזמנה תישאר בהיסטוריה.</p>
+      <p id="cancel-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="button secondary" data-close="cancel-dialog">השארת ההזמנה</button>
+        <button class="button danger" id="confirm-cancel">ביטול והחזרת מלאי</button>
+      </div>
+    </dialog>
+    <dialog id="ledger-dialog" class="wide-dialog">
+      <div class="dialog-heading">
+        <h2>יומן תנועות מלאי</h2>
+        <button class="icon-button" data-close="ledger-dialog" aria-label="סגירה">×</button>
+      </div>
+      <label class="field-label" for="ledger-product">מוצר</label>
+      <select id="ledger-product"></select>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>תנועה</th>
+              <th>שינוי</th>
+              <th>מלאי לאחר תנועה</th>
+              <th>מועד</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-body"></tbody>
+        </table>
+      </div>
+      <p id="ledger-error" class="form-error" role="alert" hidden></p>
+    </dialog>
+    <template id="order-line-template">
+      <div class="order-line">
+        <select class="line-product" aria-label="בחירת מוצר" required></select>
+        <input class="line-quantity" aria-label="כמות יחידות" type="number" min="1" max="1000000" step="1" value="1" required>
+        <button class="icon-button remove-line" type="button" aria-label="הסרת מוצר">×</button>
+      </div>
+    </template>
+  </body>
+</html>

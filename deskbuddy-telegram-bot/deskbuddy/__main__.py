@@ -20,6 +20,8 @@ def main(argv=None):
     demo.add_argument("--db", help="optional NEW database for inspecting synthetic demo records")
     simulator = commands.add_parser("simulate", help="interactive offline customer/admin chat")
     simulator.add_argument("--db", help="optional database for resuming the offline session")
+    web = commands.add_parser("web-demo", help="local browser demo with synthetic customer and admin roles")
+    web.add_argument("--port", type=int, default=8812)
     poll = commands.add_parser("poll", help="explicitly connect your own configured bot to Telegram")
     poll.add_argument("--db", default=".deskbuddy/live.sqlite3")
     args = parser.parse_args(argv)
@@ -28,6 +30,9 @@ def main(argv=None):
             run_demo(args.db, args.json)
         elif args.command == "simulate":
             simulate(args.db)
+        elif args.command == "web-demo":
+            from .web_demo import run_web_demo
+            run_web_demo(args.port)
         else:
             token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
             raw_admins = os.environ.get("DESKBUDDY_ADMIN_IDS", "")
@@ -47,7 +52,10 @@ def main(argv=None):
             finally:
                 store.close()
     except KeyboardInterrupt:
-        print("\nDeskBuddy stopped. Committed state and pending replies are retained.", file=sys.stderr)
+        if args.command == "web-demo":
+            print("\nLocal demo stopped. Temporary demo data was removed.", file=sys.stderr)
+        else:
+            print("\nDeskBuddy stopped. Committed state and pending replies are retained.", file=sys.stderr)
         return 0
     except (ValueError, OSError, sqlite3.Error, TransportError) as error:
         # Transport errors deliberately contain no URL, token or remote error body.

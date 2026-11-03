@@ -1,30 +1,36 @@
 """Transport-independent intake state machine and authorization rules."""
+from collections.abc import Callable, Iterable
 import time
+from . import messages
 from .db import Store
 from .models import Message, Outcome
 
 
-WELCOME = "היי, אני דסקבאדי 🐾\nעוזר קטן שמסדר בקשות לעסק.\n/new לפתיחת בקשה\n/status למעקב\n/help לעזרה"
-HELP = "🐾 פותחים בקשה עם /new ועונים על כמה שאלות.\n/status מציג רק את הבקשות שלך.\n/cancel מבטל טיוטה שטרם נשלחה.\nנא לא לשלוח סיסמאות, פרטי תשלום או מידע רגיש."
+WELCOME = messages.WELCOME
+HELP = messages.HELP
 
 
 class BotService:
-    def __init__(self, store: Store, admin_ids, clock=time.time, rate_limit=12):
+    def __init__(self, store: Store, admin_ids: Iterable[int],
+                 clock: Callable[[], float] = time.time, rate_limit: int = 12):
         ids = frozenset(admin_ids)
         if not ids or len(ids) > 20 or any(type(i) is not int or i <= 0 for i in ids):
             raise ValueError("Configure between 1 and 20 positive administrator IDs")
         if not 1 <= rate_limit <= 100:
             raise ValueError("Rate limit must be between 1 and 100")
-        self.store, self.admin_ids, self.clock, self.rate_limit = store, ids, clock, rate_limit
+        self.store = store
+        self.admin_ids = ids
+        self.clock = clock
+        self.rate_limit = rate_limit
 
-    def ignore(self, update_id):
+    def ignore(self, update_id: int) -> None:
         if type(update_id) is not int or update_id < 0:
             return
         with self.store.transaction():
             if not self.store.seen(update_id):
                 self.store.mark_processed(update_id, self.clock())
 
-    def handle(self, message: Message):
+    def handle(self, message: Message) -> Outcome:
         if (type(message.update_id) is not int or message.update_id < 0 or
                 type(message.user_id) is not int or message.user_id <= 0 or
                 type(message.chat_id) is not int or message.chat_id == 0 or
@@ -41,9 +47,9 @@ class BotService:
                 if not allowed:
                     limited = True
                     if warn:
-                        replies.append((message.chat_id, "רגע קטן לנשום 🐾 נסו שוב בעוד דקה. הטיוטה נשמרה."))
+                        replies.append((message.chat_id, messages.RATE_LIMITED))
                 elif len(message.text) > 2000 or "\x00" in message.text:
-                    replies.append((message.chat_id, "ההודעה ארוכה מדי או מכילה תו לא נתמך. שלחו עד 2,000 תווים."))
+                    replies.append((message.chat_id, messages.TEXT_TOO_LONG))
                 else:
                     replies = self._respond(message, now)
             for ordinal, (chat_id, text) in enumerate(replies):
@@ -51,7 +57,7 @@ class BotService:
             self.store.mark_processed(message.update_id, now)
             return Outcome(replies_queued=len(replies), rate_limited=limited)
 
-    def _respond(self, msg, now):
+    def _respond(self, msg: Message, now: float) -> list[tuple[int, str]]:
         text = msg.text.strip()
         parts = text.split(maxsplit=1)
         command = parts[0].split("@")[0].lower() if parts and text.startswith("/") else ""
@@ -84,9 +90,13 @@ class BotService:
             if self.store.open_count(msg.user_id) >= 3:
                 return reply("כבר יש לך שלוש בקשות פתוחות. אפשר לבדוק אותן עם /status.")
             self.store.save_conversation(msg.user_id, "name", {}, now)
-            return reply("נעים להכיר 🐾 איך קוראים לך או לעסק? (2–80 תווים)")
+            return reply(messages.PROMPT_NAME)
         if command:
             return reply("לא הכרתי את הפקודה הזו. /help מציג את האפשרויות 🐾")
+        return self._continue_draft(msg, text, now)
+
+    def _continue_draft(self, msg: Message, text: str, now: float) -> list[tuple[int, str]]:
+        reply = lambda value: [(msg.chat_id, value)]
         conversation = self.store.conversation(msg.user_id)
         if not conversation:
             return reply("אני כאן כדי לסדר בקשה לעסק 🐾 מתחילים עם /new.")
@@ -96,33 +106,41 @@ class BotService:
                 return reply("מה השם? אפשר להזין בין 2 ל־80 תווים.")
             data["name"] = text
             self.store.save_conversation(msg.user_id, "need", data, now)
-            return reply("מה צריך לפתור? ספרו מה קורה היום ומה התוצאה הרצויה. (10–1,000 תווים)")
+            return reply(messages.PROMPT_NEED)
         if step == "need":
             if not 10 <= len(text) <= 1000:
                 return reply("כדי להבין את הבקשה, כתבו בין 10 ל־1,000 תווים.")
             data["need"] = text
             self.store.save_conversation(msg.user_id, "contact", data, now)
-            return reply("איך נוח לחזור אליך? אפשר לכתוב דוא״ל, טלפון או ״כאן בצ׳אט״. (3–120 תווים)")
+            return reply(messages.PROMPT_CONTACT)
         if step == "contact":
             if not 3 <= len(text) <= 120:
                 return reply("דרך קשר צריכה להיות בין 3 ל־120 תווים. אין צורך בפרטים רגישים.")
             data["contact"] = text
             self.store.save_conversation(msg.user_id, "confirm", data, now)
-            return reply(f"כמעט שם 🐾\nשם: {data['name']}\nבקשה: {data['need']}\nדרך קשר: {data['contact']}\n\nלשליחה כתבו ״שלח״ או send. /cancel לביטול.\nהפרטים יועברו למנהלי העסק; עדכון סגירה יישלח כאן.")
+            return reply(messages.confirmation(data))
+        return self._submit_draft(msg, data, text, now)
+
+    def _submit_draft(self, msg: Message, data: dict[str, str],
+                      text: str, now: float) -> list[tuple[int, str]]:
+        reply = lambda value: [(msg.chat_id, value)]
         if text.casefold() not in {"שלח", "אישור", "send", "yes"}:
             return reply("כדי לשלוח כתבו ״שלח״ או send. לביטול: /cancel.")
         if self.store.open_count(msg.user_id) >= 3:
             return reply("כבר יש שלוש בקשות פתוחות. הטיוטה נשמרה; אפשר לבדוק /status.")
         ticket_id = self.store.create_ticket(msg, data, now)
         self.store.cancel_conversation(msg.user_id)
-        replies = reply(f"הבקשה נשלחה 🐾 המספר שלך הוא #{ticket_id}.\nלמעקב: /status {ticket_id}\nהבקשה עדיין אינה הזמנה או התחייבות למחיר ולמועד.")
+        replies = reply(messages.ticket_created(ticket_id))
         for admin_id in sorted(self.admin_ids):
-            replies.append((admin_id, f"🐾 בקשה חדשה #{ticket_id}\n{data['name']}\n{data['need'][:160]}\nלפרטים: /ticket {ticket_id}"))
+            replies.append((admin_id, messages.new_ticket_for_admin(ticket_id, data)))
         return replies
 
     @staticmethod
-    def _positive_id(text):
-        return int(text) if text.isascii() and text.isdecimal() and 1 <= len(text) <= 12 and int(text) > 0 else None
+    def _positive_id(text: str) -> int | None:
+        if not text.isascii() or not text.isdecimal() or not 1 <= len(text) <= 12:
+            return None
+        identifier = int(text)
+        return identifier if identifier > 0 else None
 
     def _admin(self, msg, command, argument, now):
         reply = lambda text: [(msg.chat_id, text)]
@@ -143,7 +161,7 @@ class BotService:
         if ticket is None:
             return reply("הבקשה לא נמצאה.")
         if command == "/ticket":
-            return reply(f"בקשה #{ticket_id}\nשם: {ticket['name']}\nבקשה: {ticket['need']}\nקשר: {ticket['contact']}\nמצב: {'פתוחה' if ticket['status']=='open' else 'נסגרה'}")
+            return reply(messages.ticket_details(ticket))
         note = split[1].strip() if len(split) == 2 else ""
         if len(note) > 300:
             return reply("הערת סגירה יכולה להכיל עד 300 תווים.")

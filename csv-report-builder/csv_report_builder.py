@@ -18,6 +18,8 @@ REQUIRED = ("date", "item", "quantity", "unit_price")
 COMPUTED = ("line_total", "source_file", "source_index", "source_row")
 OUTPUT_FILES = ("consolidated.csv", "summary.csv", "report.json", "report.txt")
 ALIASES = {"sale_date": "date", "product": "item", "qty": "quantity", "price": "unit_price"}
+DuplicateKey = tuple[tuple[str, str], ...]
+ItemTotals = dict[str, tuple[int, Decimal]]
 
 
 class DataError(ValueError):
@@ -60,7 +62,8 @@ def canonical_header(value: str) -> str:
     return ALIASES.get(name, name)
 
 
-def parse_record(cells, headers, filename, file_index, row_number):
+def parse_record(cells: list[str], headers: list[str], filename: str,
+                 file_index: int, row_number: int) -> tuple[Record, DuplicateKey]:
     where = f"input #{file_index} {filename!r}, record {row_number}"
     if len(cells) != len(headers):
         raise DataError(f"{where}: expected {len(headers)} fields, received {len(cells)}")
@@ -92,7 +95,8 @@ def parse_record(cells, headers, filename, file_index, row_number):
     return record, duplicate_key
 
 
-def load_inputs(paths, delimiter=None, keep_duplicates=False):
+def load_inputs(paths: list[Path], delimiter: str | None = None,
+                keep_duplicates: bool = False) -> tuple[list[Record], list[InputStats], list[str]]:
     records, stats, extra_headers, seen = [], [], [], set()
     for index, path in enumerate(paths, start=1):
         try:
@@ -147,7 +151,7 @@ def load_inputs(paths, delimiter=None, keep_duplicates=False):
     return records, stats, extra_headers
 
 
-def summarize(records):
+def summarize(records: list[Record]) -> tuple[ItemTotals, Decimal, int]:
     grouped = {}
     with localcontext() as context:
         context.prec = max(len(r.line_total.as_tuple().digits) for r in records) + len(str(len(records))) + 8
@@ -161,7 +165,7 @@ def summarize(records):
     return grouped, grand_total, quantity
 
 
-def money(value):
+def money(value: Decimal) -> str:
     return format(value, ".2f")
 
 
@@ -180,6 +184,40 @@ def build_report(records, stats, grouped, total, quantity, currency, keep_duplic
         "csv_text_protection": "Potential spreadsheet formula text is prefixed with an apostrophe.",
         "validation": "Strict: every input record validated before report files are published.",
     }
+
+
+def write_csv_reports(staging: Path, records: list[Record], extra_headers: list[str],
+                      grouped: ItemTotals) -> None:
+    """Write both spreadsheet reports into the unpublished staging directory."""
+    with (staging / "consolidated.csv").open("w", encoding="utf-8-sig", newline="") as destination:
+        writer = csv.writer(destination)
+        writer.writerow([protect_text(v) for v in (*REQUIRED, *COMPUTED, *extra_headers)])
+        for record in records:
+            writer.writerow([
+                record.day, protect_text(record.item), record.quantity, money(record.unit_price),
+                money(record.line_total), protect_text(record.source_file), record.source_index, record.source_row,
+                *[protect_text(record.extras.get(header, "")) for header in extra_headers]])
+    with (staging / "summary.csv").open("w", encoding="utf-8-sig", newline="") as destination:
+        writer = csv.writer(destination)
+        writer.writerow(["item", "quantity", "total_amount"])
+        for item in sorted(grouped, key=lambda value: (value.casefold(), value)):
+            count, amount = grouped[item]
+            writer.writerow([protect_text(item), count, money(amount)])
+
+
+def report_text(report: dict, stats: list[InputStats]) -> str:
+    lines = [
+        "CSV Report Builder", f"Currency: {report['currency'] or 'not specified (all inputs must use one currency)'}",
+        f"Input files: {len(stats)}", f"Data rows read: {report['data_rows_read']}",
+        f"Duplicate rows detected: {report['duplicate_rows_detected']}",
+        f"Duplicate rows removed: {report['duplicate_rows_removed']}",
+        f"Rows exported: {report['rows_exported']}", f"Grouped items: {report['items']}",
+        f"Total quantity: {report['total_quantity']}", f"Grand total: {report['grand_total']}", "",
+        "Inputs (names only; source_index disambiguates repeated filenames):",
+        *[f"  {info.index}: {json.dumps(info.name, ensure_ascii=False)} — {info.data_rows_read} data rows" for info in stats],
+        "", report["deduplication"], report["csv_text_protection"], report["validation"],
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def write_outputs(output, paths, records, stats, extra_headers, currency=None,
@@ -202,33 +240,9 @@ def write_outputs(output, paths, records, stats, extra_headers, currency=None,
     created, installed = False, []
     with tempfile.TemporaryDirectory(prefix=".csv-report-", dir=output.parent) as temporary:
         staging = Path(temporary)
-        with (staging / "consolidated.csv").open("w", encoding="utf-8-sig", newline="") as destination:
-            writer = csv.writer(destination)
-            writer.writerow([protect_text(v) for v in (*REQUIRED, *COMPUTED, *extra_headers)])
-            for record in records:
-                writer.writerow([
-                    record.day, protect_text(record.item), record.quantity, money(record.unit_price),
-                    money(record.line_total), protect_text(record.source_file), record.source_index, record.source_row,
-                    *[protect_text(record.extras.get(h, "")) for h in extra_headers]])
-        with (staging / "summary.csv").open("w", encoding="utf-8-sig", newline="") as destination:
-            writer = csv.writer(destination)
-            writer.writerow(["item", "quantity", "total_amount"])
-            for item in sorted(grouped, key=lambda v: (v.casefold(), v)):
-                count, amount = grouped[item]
-                writer.writerow([protect_text(item), count, money(amount)])
+        write_csv_reports(staging, records, extra_headers, grouped)
         (staging / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        lines = [
-            "CSV Report Builder", f"Currency: {currency or 'not specified (all inputs must use one currency)'}",
-            f"Input files: {len(stats)}", f"Data rows read: {report['data_rows_read']}",
-            f"Duplicate rows detected: {report['duplicate_rows_detected']}",
-            f"Duplicate rows removed: {report['duplicate_rows_removed']}",
-            f"Rows exported: {len(records)}", f"Grouped items: {len(grouped)}",
-            f"Total quantity: {quantity}", f"Grand total: {money(total)}", "",
-            "Inputs (names only; source_index disambiguates repeated filenames):",
-            *[f"  {s.index}: {json.dumps(s.name, ensure_ascii=False)} — {s.data_rows_read} data rows" for s in stats],
-            "", report["deduplication"], report["csv_text_protection"], report["validation"],
-        ]
-        (staging / "report.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (staging / "report.txt").write_text(report_text(report, stats), encoding="utf-8")
         try:
             if not output.exists():
                 output.mkdir(mode=0o700)
@@ -250,21 +264,21 @@ def write_outputs(output, paths, records, stats, extra_headers, currency=None,
     return report
 
 
-def delimiter_option(value):
+def delimiter_option(value: str) -> str | None:
     options = {"auto": None, "comma": ",", "semicolon": ";", "tab": "\t", "pipe": "|", ",": ",", ";": ";", "|": "|"}
     if value not in options:
         raise argparse.ArgumentTypeError("choose auto, comma, semicolon, tab or pipe")
     return options[value]
 
 
-def currency_option(value):
+def currency_option(value: str) -> str:
     value = value.upper()
     if not re.fullmatch(r"[A-Z]{3}", value):
         raise argparse.ArgumentTypeError("currency must be a three-letter label such as ILS or USD")
     return value
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate and consolidate sales CSV files into exact monetary reports.")
     parser.add_argument("inputs", type=Path, nargs="+", help="one or more UTF-8/BOM sales CSV files")
     parser.add_argument("--output", type=Path, required=True, help="new output directory")

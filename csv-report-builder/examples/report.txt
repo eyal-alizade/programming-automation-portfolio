@@ -1,0 +1,18 @@
+CSV Report Builder
+Currency: ILS
+Input files: 2
+Data rows read: 6
+Duplicate rows detected: 1
+Duplicate rows removed: 1
+Rows exported: 5
+Grouped items: 3
+Total quantity: 9
+Grand total: 185.10
+
+Inputs (names only; source_index disambiguates repeated filenames):
+  1: "sales-a.csv" — 3 data rows
+  2: "sales-b.csv" — 3 data rows
+
+Exact decoded cells under normalized column names, including extra columns; source location excluded.
+Potential spreadsheet formula text is prefixed with an apostrophe.
+Strict: every input record validated before report files are published.

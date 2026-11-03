@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeskBuddy — הדגמה מקומית</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div class="brand">
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div>
+          <strong lang="en" dir="ltr">DeskBuddy</strong>
+          <span>בקשות העסק, במקום אחד</span>
+        </div>
+      </div>
+      <span class="demo-label">דמו מקומי · נתוני הדגמה</span>
+    </header>
+
+    <section class="workspace-heading">
+      <div>
+        <h1>מרכז בקשות</h1>
+        <p>שיחה קצרה ללקוח. בקשה מסודרת למנהל.</p>
+      </div>
+      <div class="role-switch" aria-label="בחירת תפקיד בהדגמה">
+        <button type="button" data-role="customer" aria-pressed="true">לקוח</button>
+        <button type="button" data-role="admin" aria-pressed="false">מנהל</button>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <section class="chat-panel" aria-label="שיחה עם דסקבאדי">
+        <header class="chat-header">
+          <div>
+            <span class="avatar" aria-hidden="true">🐾</span>
+            <div>
+              <h2 id="chat-title">השיחה שלי</h2>
+              <span id="chat-subtitle">לקוח הדגמה</span>
+            </div>
+          </div>
+          <span class="local-status"><i aria-hidden="true"></i>מקומי</span>
+        </header>
+        <div class="quick-actions" id="quick-actions"></div>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-label="הודעות השיחה"></div>
+        <form class="composer" id="message-form">
+          <label for="message-input" class="sr-only">הודעה לדסקבאדי</label>
+          <textarea id="message-input" rows="2" maxlength="2000" placeholder="אפשר להתחיל עם בקשה חדשה…" required></textarea>
+          <button type="submit" class="send-button" id="send-button">
+            שליחה <span aria-hidden="true">←</span>
+          </button>
+          <span class="composer-hint">Enter לשליחה · Shift+Enter לשורה חדשה</span>
+        </form>
+      </section>
+
+      <aside class="details-panel">
+        <section class="status-card" id="progress-card">
+          <div class="card-heading">
+            <h2>פתיחת בקשה</h2>
+            <span id="draft-badge">טרם התחילה</span>
+          </div>
+          <ol class="progress-list" id="progress-list">
+            <li data-step="name"><span>1</span>שם</li>
+            <li data-step="need"><span>2</span>מה צריך</li>
+            <li data-step="contact"><span>3</span>דרך קשר</li>
+            <li data-step="confirm"><span>4</span>אישור</li>
+          </ol>
+          <button type="button" class="confirm-button" id="confirm-button" hidden>אישור ושליחת הבקשה</button>
+          <p id="progress-note">פותחים בקשה ועונים על כמה שאלות קצרות.</p>
+        </section>
+
+        <section class="ticket-section">
+          <div class="card-heading">
+            <h2 id="tickets-title">הבקשות שלי</h2>
+            <span class="count-pill" id="ticket-count">0</span>
+          </div>
+          <div class="stats">
+            <div><strong id="open-count">0</strong><span>פתוחות</span></div>
+            <div><strong id="closed-count">0</strong><span>נסגרו</span></div>
+          </div>
+          <div id="ticket-list" class="ticket-list"></div>
+        </section>
+
+        <p class="demo-note">זו הדגמה של הבוט במחשב המקומי. החלפת התפקיד מאפשרת לנסות גם את צד הלקוח וגם את צד המנהל. אין חיבור ל־Telegram.</p>
+      </aside>
+    </div>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <footer>נבנה על ידי אייל אליזאדה <span aria-hidden="true">·</span> הדגמת תיק עבודות</footer>
+  </main>
+</body>
+</html>

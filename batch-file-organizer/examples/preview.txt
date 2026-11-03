@@ -1,0 +1,8 @@
+DRY RUN — no files will be changed.
+WOULD MOVE meeting.txt -> txt/meeting.txt
+WOULD MOVE orders.csv -> csv/orders.csv
+WOULD MOVE README -> no-extension/README
+WOULD MOVE report.TXT -> txt/report.TXT
+WOULD MOVE settings.json -> json/settings.json
+SKIP nested: not a regular top-level file
+Planned: 5 | Skipped: 1

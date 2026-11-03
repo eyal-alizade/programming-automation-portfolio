@@ -4,7 +4,7 @@ Local run on 2026-11-03, Linux, Python 3.14.9. This records an actual execution,
 
 | Check | Result |
 |---|---|
-| `python -m unittest discover -s tests -v` | 32 tests passed |
+| `python -m unittest discover -s tests -v` | 38 tests passed |
 | Offline `demo.py` | All six acceptance checks passed |
 | `python -m pip check` | No broken requirements |
 | Concurrent orders for one available unit | One reservation succeeds; the other receives 409 |
@@ -13,6 +13,10 @@ Local run on 2026-11-03, Linux, Python 3.14.9. This records an actual execution,
 | Partial-order and failed-cancellation rollback | No partial stock or ledger mutation |
 | CSV formula mitigation | Dangerous text cell prefixed with apostrophe |
 | Invalid/oversized resource IDs | Positive signed-64-bit bounds; 422 and zero writes |
+| Local Hebrew demo | HTML/CSS/JS served; real reservation/cancel workflow tested |
+| Demo isolation | Fresh database/key; existing environment credentials ignored |
+| Production authentication | No demo bootstrap/session route; API remains protected |
+| UI workflow logic | 6 Node tests passed: saved writes with failed reloads and rejected writes |
 
 The demo's reviewed result is saved in [examples/demo-report.json](examples/demo-report.json). Regenerate a fresh run with `python demo.py --output-dir demo-output` after installing development dependencies.
 

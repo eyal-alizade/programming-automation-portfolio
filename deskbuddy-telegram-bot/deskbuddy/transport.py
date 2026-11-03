@@ -50,6 +50,8 @@ class TelegramAPI:
                 body = error.read(16384)
             except OSError:
                 body = b""
+            finally:
+                error.close()
             self._raise_error(method, error.code, body)
         except (URLError, OSError, TimeoutError):
             # Do not expose exception strings: urllib errors can include the token-bearing URL.

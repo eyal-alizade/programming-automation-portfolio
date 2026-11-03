@@ -6,11 +6,12 @@ import sqlite3
 
 
 class Store:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, *, check_same_thread: bool = True):
         path = str(path)
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.connection = sqlite3.connect(path, timeout=5, isolation_level=None)
+        self.connection = sqlite3.connect(
+            path, timeout=5, isolation_level=None, check_same_thread=check_same_thread)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.execute("PRAGMA journal_mode = WAL")
@@ -154,6 +155,25 @@ class Store:
         return self.connection.execute(
             "SELECT * FROM tickets WHERE status='open' ORDER BY id LIMIT 10 OFFSET ?",
             ((page - 1) * 10,)).fetchall()
+
+    def recent_tickets(self, user_id=None, limit=20):
+        """Read the small ticket list used by the local demo."""
+        if user_id is not None:
+            return self.connection.execute(
+                "SELECT * FROM tickets WHERE user_id=? ORDER BY id DESC LIMIT ?",
+                (user_id, limit)).fetchall()
+        return self.connection.execute(
+            "SELECT * FROM tickets ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+
+    def ticket_counts(self, user_id=None):
+        where = " WHERE user_id=?" if user_id is not None else ""
+        parameters = (user_id,) if user_id is not None else ()
+        rows = self.connection.execute(
+            "SELECT status,COUNT(*) AS total FROM tickets" + where + " GROUP BY status",
+            parameters).fetchall()
+        counts = {"open": 0, "closed": 0}
+        counts.update({row["status"]: row["total"] for row in rows})
+        return counts
 
     def close_ticket(self, ticket_id, note, now):
         self.connection.execute(
