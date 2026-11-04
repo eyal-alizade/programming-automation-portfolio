@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-11-03T18:59:53.949905+00:00",
+  "verified_at_utc": "2026-11-04T06:22:50.534754+00:00",
   "python_version": "3.14.9",
   "platform": "linux",
   "projects": [
@@ -8,42 +8,57 @@
       "passed": true,
       "python_tests_run": 37,
       "javascript_tests_run": 0,
-      "tests_run": 37
+      "tests_run": 37,
+      "tests_skipped": 0,
+      "tests_executed": 37
     },
     {
       "project": "stockpilot-api",
       "passed": true,
       "python_tests_run": 38,
       "javascript_tests_run": 6,
-      "tests_run": 44
+      "tests_run": 44,
+      "tests_skipped": 0,
+      "tests_executed": 44
     },
     {
       "project": "batch-file-organizer",
       "passed": true,
       "python_tests_run": 25,
       "javascript_tests_run": 0,
-      "tests_run": 25
+      "tests_run": 25,
+      "tests_skipped": 0,
+      "tests_executed": 25
     },
     {
       "project": "csv-report-builder",
       "passed": true,
       "python_tests_run": 14,
       "javascript_tests_run": 0,
-      "tests_run": 14
+      "tests_run": 14,
+      "tests_skipped": 0,
+      "tests_executed": 14
     },
     {
       "project": "backup-integrity-checker",
       "passed": true,
       "python_tests_run": 22,
       "javascript_tests_run": 0,
-      "tests_run": 22
+      "tests_run": 22,
+      "tests_skipped": 0,
+      "tests_executed": 22
     }
   ],
   "all_passed": true,
   "total_tests_run": 142,
   "total_python_tests_run": 136,
   "total_javascript_tests_run": 6,
+  "total_tests_skipped": 0,
+  "total_tests_executed": 142,
   "external_services_used_by_checks": false,
   "github_actions_executed": false,
-  "native_windows_verification": false
+  "native_windows_verification": false,
+  "verification_scope": "automated_test_suites",
+  "manual_gui_verification": false,
+  "live_telegram_verification": false
 }

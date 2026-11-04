@@ -2,6 +2,7 @@
 
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
+import errno
 import io
 import json
 import os
@@ -29,6 +30,22 @@ class OrganizerTests(unittest.TestCase):
         path = self.source / name
         path.write_text(content, encoding="utf-8")
         return path
+
+    def create_symlink(self, link, target, *, target_is_directory=False):
+        try:
+            link.symlink_to(target, target_is_directory=target_is_directory)
+        except NotImplementedError as error:
+            self.skipTest(f"Creating symlinks is unavailable: {error}")
+        except OSError as error:
+            capability_errors = {
+                errno.EPERM, errno.EACCES, errno.ENOSYS,
+                getattr(errno, "EOPNOTSUPP", errno.ENOSYS),
+                getattr(errno, "ENOTSUP", errno.ENOSYS),
+            }
+            if (error.errno not in capability_errors
+                    and getattr(error, "winerror", None) not in {50, 1314}):
+                raise
+            self.skipTest(f"Creating symlinks is unavailable: {error}")
 
     def run_cli(self, *arguments):
         output, errors = io.StringIO(), io.StringIO()
@@ -112,7 +129,7 @@ class OrganizerTests(unittest.TestCase):
     def test_symlink_file_is_ignored(self):
         external = self.base / "external.txt"
         external.write_text("Outside input")
-        (self.source / "link.txt").symlink_to(external)
+        self.create_symlink(self.source / "link.txt", external)
         code, output, _ = self.run_cli("organize", self.source, self.target, "--apply")
         self.assertEqual(code, 0)
         self.assertIn("not a regular top-level file", output)
@@ -122,7 +139,7 @@ class OrganizerTests(unittest.TestCase):
     @unittest.skipUnless(hasattr(os, "symlink"), "Symlink support required")
     def test_symlinked_source_root_is_rejected(self):
         alias = self.base / "alias"
-        alias.symlink_to(self.source, target_is_directory=True)
+        self.create_symlink(alias, self.source, target_is_directory=True)
         code, _, errors = self.run_cli("organize", alias, self.target)
         self.assertEqual(code, 2)
         self.assertIn("Symlinks are not allowed", errors)
@@ -136,7 +153,7 @@ class OrganizerTests(unittest.TestCase):
         outside_file = external / "incoming" / "outside.txt"
         outside_file.write_text("Synthetic outside file")
         alias = self.base / "alias"
-        alias.symlink_to(external / "nested", target_is_directory=True)
+        self.create_symlink(alias, external / "nested", target_is_directory=True)
         supplied = alias / ".." / "incoming"
         self.assertEqual(supplied.resolve(), external / "incoming")
         code, _, errors = self.run_cli("organize", supplied, self.target, "--apply")
@@ -152,7 +169,7 @@ class OrganizerTests(unittest.TestCase):
         external = self.base / "external"
         (external / "nested").mkdir(parents=True)
         alias = self.base / "alias"
-        alias.symlink_to(external / "nested", target_is_directory=True)
+        self.create_symlink(alias, external / "nested", target_is_directory=True)
         supplied = alias / ".." / "organized"
         self.assertEqual(supplied.resolve(), external / "organized")
         code, _, errors = self.run_cli("organize", self.source, supplied, "--apply")
@@ -168,7 +185,7 @@ class OrganizerTests(unittest.TestCase):
         self.target.mkdir()
         external = self.base / "external"
         external.mkdir()
-        (self.target / "txt").symlink_to(external, target_is_directory=True)
+        self.create_symlink(self.target / "txt", external, target_is_directory=True)
         code, output, _ = self.run_cli("organize", self.source, self.target, "--apply")
         self.assertEqual(code, 0)
         self.assertIn("Symlinks are not allowed", output)
