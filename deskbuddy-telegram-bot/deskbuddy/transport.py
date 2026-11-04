@@ -101,6 +101,16 @@ class TelegramAPI:
     def send_message(self, chat_id, text):
         return self._request("sendMessage", {"chat_id": chat_id, "text": text})
 
+    def set_my_commands(self, commands, scope):
+        result = self._request("setMyCommands", {"commands": commands, "scope": scope}, timeout=5)
+        if result is not True:
+            raise TransportError("Telegram did not confirm command registration")
+
+    def set_chat_menu_button(self):
+        result = self._request("setChatMenuButton", {"menu_button": {"type": "commands"}}, timeout=5)
+        if result is not True:
+            raise TransportError("Telegram did not confirm menu button registration")
+
 
 class FakeAPI:
     """In-memory transport for demos/tests. It never constructs HTTP requests."""

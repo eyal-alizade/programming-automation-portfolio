@@ -3,9 +3,11 @@ import logging
 import os
 import sqlite3
 import sys
+import time
 from . import __version__
 from .db import Store
 from .demo import run_demo, simulate
+from .menus import configure_command_menu
 from .runner import Runner
 from .service import BotService
 from .transport import TelegramAPI, TransportError
@@ -48,7 +50,12 @@ def main(argv=None):
             try:
                 store.bind_runtime("telegram", bot["id"])
                 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-                Runner(BotService(store, admin_ids), api).run_forever()
+                runner = Runner(BotService(store, admin_ids), api)
+                delay = runner.flush()
+                if delay:
+                    time.sleep(delay)
+                configure_command_menu(api, admin_ids)
+                runner.run_forever()
             finally:
                 store.close()
     except KeyboardInterrupt:
