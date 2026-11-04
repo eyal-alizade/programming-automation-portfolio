@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-11-04T06:22:50.534754+00:00",
+  "verified_at_utc": "2026-11-04T06:31:04.132988+00:00",
   "python_version": "3.14.9",
   "platform": "linux",
   "projects": [
@@ -42,19 +42,19 @@
     {
       "project": "backup-integrity-checker",
       "passed": true,
-      "python_tests_run": 22,
+      "python_tests_run": 24,
       "javascript_tests_run": 0,
-      "tests_run": 22,
+      "tests_run": 24,
       "tests_skipped": 0,
-      "tests_executed": 22
+      "tests_executed": 24
     }
   ],
   "all_passed": true,
-  "total_tests_run": 142,
-  "total_python_tests_run": 136,
+  "total_tests_run": 144,
+  "total_python_tests_run": 138,
   "total_javascript_tests_run": 6,
   "total_tests_skipped": 0,
-  "total_tests_executed": 142,
+  "total_tests_executed": 144,
   "external_services_used_by_checks": false,
   "github_actions_executed": false,
   "native_windows_verification": false,

@@ -70,7 +70,12 @@ def scan(root: Path) -> tuple[dict[str, os.stat_result], list[str]]:
                     visit(path)
                 elif entry.is_file(follow_symlinks=False):
                     safe_relative_path(relative)
-                    files[relative] = entry.stat(follow_symlinks=False)
+                    # Windows DirEntry.stat() omits device/inode identity. Use
+                    # path metadata so the snapshot can be compared with fstat().
+                    info = path.lstat()
+                    if not stat.S_ISREG(info.st_mode):
+                        raise BackupError(f"Source changed while scanning: {relative!r}")
+                    files[relative] = info
                 else:
                     raise BackupError(f"Unsupported special file: {relative!r}")
 

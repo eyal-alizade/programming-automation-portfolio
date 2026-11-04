@@ -1,8 +1,10 @@
+from contextlib import contextmanager
 import hashlib
 import json
 from pathlib import Path
 import stat
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import warnings
@@ -46,6 +48,35 @@ class BackupTests(unittest.TestCase):
             manifest = json.loads(archive.read(app.MANIFEST))
             self.assertEqual(manifest["version"], 1)
             self.assertTrue(all(len(item["sha256"]) == 64 for item in manifest["files"]))
+
+    def test_round_trip_when_directory_entries_omit_file_identity(self):
+        real_scandir = app.os.scandir
+
+        @contextmanager
+        def windows_directory_entries(directory):
+            with real_scandir(directory) as entries:
+                wrapped = []
+                for entry in entries:
+                    info = entry.stat(follow_symlinks=False)
+                    cached = SimpleNamespace(
+                        st_dev=0, st_ino=0, st_mode=info.st_mode,
+                        st_size=info.st_size, st_mtime_ns=info.st_mtime_ns,
+                        st_ctime_ns=info.st_ctime_ns)
+                    wrapped.append(SimpleNamespace(
+                        name=entry.name, path=entry.path,
+                        is_symlink=entry.is_symlink, is_dir=entry.is_dir,
+                        is_file=entry.is_file,
+                        stat=lambda follow_symlinks=False, value=cached: value))
+                yield iter(wrapped)
+
+        with patch.object(app.os, "scandir", windows_directory_entries):
+            self.assertEqual(self.backup()["files"], 3)
+            self.assertTrue(app.verify_backup(self.archive, self.source)["source_matches"])
+
+    def test_scan_rejects_file_that_changed_to_a_symlink(self):
+        with patch.object(Path, "lstat", return_value=SimpleNamespace(st_mode=stat.S_IFLNK)):
+            with self.assertRaisesRegex(app.BackupError, "changed while scanning"):
+                app.scan(self.source)
 
     def test_refuses_overwrite_without_touching_existing_output(self):
         self.archive.write_bytes(b"keep me")

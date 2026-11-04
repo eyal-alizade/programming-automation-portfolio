@@ -20,7 +20,7 @@ class ReportTests(unittest.TestCase):
 
     def source(self, text, name="input.csv", encoding="utf-8"):
         path = self.root / name
-        path.write_text(text, encoding=encoding)
+        path.write_text(text, encoding=encoding, newline="")
         return path
 
     def run_cli(self, paths, output=None, *options):
@@ -53,11 +53,22 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(row["note"], "demo, only")
 
     def test_explicit_tab_delimiter_and_quoted_multiline_field(self):
-        source = self.source('date\titem\tquantity\tunit_price\n2026-11-03\t"A\nB"\t1\t12.34\n')
-        code, _, error, output = self.run_cli([source], None, "--delimiter", "tab")
-        self.assertEqual(code, 0, error)
-        with (output / "summary.csv").open(encoding="utf-8-sig", newline="") as file:
-            self.assertEqual(next(csv.DictReader(file))["item"], "A\nB")
+        for index, newline in enumerate(("\n", "\r\n")):
+            with self.subTest(newline=repr(newline)):
+                item = f"A{newline}B"
+                content = (
+                    f"date\titem\tquantity\tunit_price{newline}"
+                    f'2026-11-03\t"{item}"\t1\t12.34{newline}'
+                )
+                source = self.source(content, name=f"input-{index}.csv")
+                self.assertEqual(source.read_bytes(), content.encode("utf-8"))
+                code, _, error, output = self.run_cli(
+                    [source], self.root / f"reports-{index}", "--delimiter", "tab",
+                )
+                self.assertEqual(code, 0, error)
+                for report in ("summary.csv", "consolidated.csv"):
+                    with (output / report).open(encoding="utf-8-sig", newline="") as file:
+                        self.assertEqual(next(csv.DictReader(file))["item"], item)
 
     def test_decimal_totals_do_not_use_binary_float_or_default_precision(self):
         source = self.source("date,item,quantity,unit_price\n2026-11-03,A,3,0.10\n2026-11-03,B,123456789012345678901234567890,987654321098765432109876543210.99\n")
