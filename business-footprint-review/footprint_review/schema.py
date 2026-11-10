@@ -32,6 +32,10 @@ def _object(value: object, location: str, required: set[str], optional: set[str]
 def _text(value: object, location: str, limit: int = 500) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > limit:
         raise InputError(f"{location}: expected non-empty text up to {limit} characters")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise InputError(f"{location}: text must be valid Unicode") from exc
     if any(ord(char) < 32 for char in value):
         raise InputError(f"{location}: control characters are not allowed")
     return value.strip()
@@ -152,6 +156,7 @@ def validate(data: object) -> dict:
 def _unique_keys(pairs: list[tuple[str, object]]) -> dict:
     result = {}
     for key, value in pairs:
+        _text(key, "JSON key")
         if key in result:
             raise InputError(f"JSON contains a duplicate key: {key}")
         result[key] = value
