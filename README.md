@@ -67,4 +67,4 @@ python tools/check_portfolio.py
 python tools/check_portfolio.py --project batch-file-organizer
 ```
 
-[תוצאות הבדיקה המקומית](verification.json) · [העלאת התיק ל־GitHub](PUBLISHING.md)
+[תוצאות הבדיקה המקומית](verification.json) · [תיעוד צילומי ההדגמה](SCREENSHOTS.md)
