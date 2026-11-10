@@ -190,6 +190,46 @@ class FootprintReviewTests(unittest.TestCase):
             self.assertNotIn("Traceback", second.stderr)
             self.assertEqual((output / "report.html").read_bytes(), original)
 
+    def test_cli_rejects_unpaired_unicode_before_creating_output(self):
+        invalid_inputs = []
+        for path in (("business", "name"), ("sources", 0, "label"), ("sources", 1, "links", 0, "note")):
+            data = copy.deepcopy(self.data)
+            parent = data
+            for part in path[:-1]:
+                parent = parent[part]
+            parent[path[-1]] = "invalid " + chr(0xD800)
+            invalid_inputs.append(data)
+        bad_key = copy.deepcopy(self.data)
+        bad_key[chr(0xDFFF)] = "invalid key"
+        invalid_inputs.append(bad_key)
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            for index, data in enumerate(invalid_inputs):
+                with self.subTest(case=index):
+                    source = folder / f"input-{index}.json"
+                    source.write_text(json.dumps(data), encoding="utf-8")
+                    original = source.read_bytes()
+                    output = folder / f"report-{index}"
+                    run = subprocess.run(
+                        [sys.executable, "-m", "footprint_review", "report", str(source), "--output", str(output)],
+                        cwd=PROJECT, capture_output=True, text=True, encoding="utf-8",
+                    )
+                    self.assertEqual(run.returncode, 1, run.stderr)
+                    self.assertIn("ERROR:", run.stderr)
+                    self.assertNotIn("Traceback", run.stderr)
+                    self.assertFalse(output.exists())
+                    self.assertEqual(source.read_bytes(), original)
+            self.data["business"]["name"] = "עסק לדוגמה 😺"
+            source = folder / "valid-unicode.json"
+            source.write_text(json.dumps(self.data), encoding="utf-8")
+            output = folder / "valid-report"
+            run = subprocess.run(
+                [sys.executable, "-m", "footprint_review", "report", str(source), "--output", str(output)],
+                cwd=PROJECT, capture_output=True, text=True, encoding="utf-8",
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertIn(self.data["business"]["name"], (output / "report.md").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
