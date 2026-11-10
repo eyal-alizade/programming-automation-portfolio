@@ -70,7 +70,7 @@ outside the supported model.
 python -m unittest discover -s tests -v
 ```
 
-22 temporary-directory tests cover integrity changes, source drift, overwrite
+Temporary-directory tests cover integrity changes, source drift, overwrite
 protection, malformed archives, symlinks, limits and 12 MiB streaming.
 Exit codes: `0` success, `1` verification failure, `2` usage or I/O error.
 Commands emit one JSON result; errors go to stderr.
