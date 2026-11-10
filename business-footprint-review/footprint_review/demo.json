@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "data_kind": "synthetic",
+  "business": {
+    "name": "סטודיו לדוגמה — עסק בדיוני",
+    "owner_confirmed_reference": true,
+    "contacts": {
+      "email": "hello@studio.example",
+      "phone": null,
+      "website": "https://studio.example/"
+    }
+  },
+  "sources": [
+    {
+      "id": "site",
+      "label": "אתר העסק לדוגמה",
+      "url": "https://studio.example/contact",
+      "observed_on": "2026-11-10",
+      "contacts": {
+        "email": "hello@studio.example",
+        "phone": null,
+        "website": "https://studio.example/"
+      },
+      "links": []
+    },
+    {
+      "id": "directory",
+      "label": "רישום במדריך עסקים לדוגמה",
+      "url": "https://directory.example/studio",
+      "observed_on": "2026-11-10",
+      "contacts": {
+        "email": "old-address@studio.example",
+        "phone": null,
+        "website": "https://studio.example/"
+      },
+      "links": [
+        {
+          "url": "https://studio.example/old-booking",
+          "state": "broken",
+          "note": "בתצפית הבדיונית נרשמה הודעת 404 בעמוד קביעת התור. הכלי לא פתח את הקישור."
+        }
+      ]
+    },
+    {
+      "id": "profile",
+      "label": "עמוד עסקי לדוגמה",
+      "url": "https://social.example/studio",
+      "observed_on": "2026-11-10",
+      "contacts": {
+        "email": null,
+        "phone": null,
+        "website": "https://studio.example/"
+      },
+      "links": [
+        {
+          "url": "https://studio.example/contact",
+          "state": "not_checked",
+          "note": "הכתובת תועדה בדוגמה, אך לא סומנה בדיקת נגישות."
+        }
+      ]
+    }
+  ]
+}

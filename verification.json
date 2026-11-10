@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-11-04T07:15:50.213818+00:00",
+  "verified_at_utc": "2026-11-10T19:40:43.548873+00:00",
   "python_version": "3.14.9",
   "platform": "linux",
   "projects": [
@@ -47,14 +47,23 @@
       "tests_run": 24,
       "tests_skipped": 0,
       "tests_executed": 24
+    },
+    {
+      "project": "business-footprint-review",
+      "passed": true,
+      "python_tests_run": 18,
+      "javascript_tests_run": 0,
+      "tests_run": 18,
+      "tests_skipped": 0,
+      "tests_executed": 18
     }
   ],
   "all_passed": true,
-  "total_tests_run": 152,
-  "total_python_tests_run": 146,
+  "total_tests_run": 170,
+  "total_python_tests_run": 164,
   "total_javascript_tests_run": 6,
   "total_tests_skipped": 0,
-  "total_tests_executed": 152,
+  "total_tests_executed": 170,
   "external_services_used_by_checks": false,
   "github_actions_executed": false,
   "native_windows_verification": false,

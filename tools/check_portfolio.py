@@ -19,6 +19,7 @@ PROJECTS = (
     "batch-file-organizer",
     "csv-report-builder",
     "backup-integrity-checker",
+    "business-footprint-review",
 )
 
 
